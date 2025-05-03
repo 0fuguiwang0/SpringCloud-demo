@@ -1,6 +1,9 @@
 package com.rabbit.order.service.impl;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.rabbit.order.bean.Order;
+import com.rabbit.order.feign.ProductFeignClient;
 import com.rabbit.order.service.OrderService;
 import com.rabbit.product.bean.Product;
 import lombok.extern.slf4j.Slf4j;
@@ -30,21 +33,49 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     RestTemplate restTemplate;
     @Autowired
-    LoadBalancerClient loadBalancerClient; //一定导入 spring-cloud-starter-loadbalancer
+    LoadBalancerClient loadBalancerClient; //一定导入 spring-cloud-starter-loadbalancer;
+    @Autowired
+    ProductFeignClient productFeignClient;
 
+
+    @SentinelResource(value = "createOrder",blockHandler = "createOrderFallback")
     @Override
     public Order createOrder(Long productId, Long userId) {
-        Product product = getProductFromRemoteWithLoadBalanceAnnotation(productId);
+//        Product product = getProductFromRemoteWithLoadBalanceAnnotation(productId);
+        //使用Feign完成远程调用
+        Product product = productFeignClient.getProductById(productId);
         Order order = new Order();
         order.setId(1L);
 
+
         // 总金额
-        order.setTotalAmount((product.getPrice().multiply(new BigDecimal(product.getNum()))));
+        order.setTotalAmount(product.getPrice().multiply(new BigDecimal(product.getNum())));
         order.setUserId(userId);
         order.setNickName("zhangsan");
         order.setAddress("尚硅谷");
         //远程查询商品列表
         order.setProductList(Arrays.asList(product));
+//
+//        try {
+//            SphU.entry("hahah");
+//
+//        } catch (BlockException e) {
+//            //编码处理
+//        }
+
+
+        return order;
+    }
+
+
+    //兜底回调
+    public Order createOrderFallback(Long productId, Long userId, BlockException e){
+        Order order = new Order();
+        order.setId(0L);
+        order.setTotalAmount(new BigDecimal("0"));
+        order.setUserId(userId);
+        order.setNickName("未知用户");
+        order.setAddress("异常信息："+e.getClass());
 
         return order;
     }
