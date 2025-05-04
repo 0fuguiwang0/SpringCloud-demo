@@ -18,7 +18,7 @@ spring:
         dashboard: localhost:8080
       web-context-unify: false
 #            request-interceptors:
-#              - com.atguigu.order.interceptor.XTokenRequestInterceptor
+#              - com.rabbit.order.interceptor.XTokenRequestInterceptor
 #            retryer: feign.retryer.Default
 
 feign:
